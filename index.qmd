@@ -1,0 +1,417 @@
+---
+title: "Money talks in Major League Baseball"
+author: "Keegan Timmins"
+date: '2026-11-13'
+categories: [mlb, money, wins]
+image: "dots.png"
+format: 
+  html:
+    code-fold: true
+---
+
+Money talks in Major League Baseball. Some teams spend hundreds of millions of dollars building their rosters, while others try to compete with a fraction of that amount
+
+In 2026, the Los Angeles Dodgers, New York Mets and New York Yankees had baseball’s three highest payrolls. Meanwhile, the Miami Marlins, Cleveland Guardians and Tampa Bay Rays had the three lowest.
+
+But does spending more money actually lead to winning more games in the MLB?
+
+Using MLB payroll and team records from 1995 to 2026, the numbers tell an interesting story
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggrepel)
+library(scales)
+
+mlb <- read.csv("mlb_payroll_wins_1995_2026.csv")
+
+mlb <- mlb |>
+  mutate(
+    team_year = paste(year, team)
+  )
+
+highball <- mlb |>
+  arrange(desc(payroll)) |>
+  head(2) 
+
+lowball <- mlb |>
+  filter(payroll < 1e+08, win_pct > .65)
+
+losers <- mlb |>
+  filter(payroll > 1.5e+08, win_pct < .400)
+
+ggplot() +
+  geom_point(
+    data=mlb,
+    aes(
+      x=payroll,
+      y=win_pct
+    ),
+    color="lightgrey"
+  ) +
+  geom_point(
+  data=highball,
+  aes(
+    x=payroll,
+    y=win_pct
+  ),
+  color="red"
+) +
+geom_point(
+  data=lowball,
+  aes(
+    x=payroll,
+    y=win_pct
+  ),
+  color="green"
+) +
+  geom_point(
+  data=losers,
+  aes(
+    x=payroll,
+    y=win_pct
+  ),
+  color="blue"
+) +
+geom_text_repel(
+  data=highball,
+  aes(
+    x=payroll,
+    y=win_pct,
+    label=team_year
+  )
+) +
+geom_text_repel(
+  data=lowball,
+  aes(
+    x=payroll,
+    y=win_pct,
+    label=team_year
+  )
+) +
+geom_text_repel(
+  data=losers,
+  aes(
+    x=payroll,
+    y=win_pct,
+    label=team_year
+  )
+) +
+  scale_x_continuous(labels=comma)+
+labs(
+  title= "Big payrolls don't always translate to big wins in MLB",
+  subtitle= "From 1995 to 2026, some MLB teams won big with smaller payrolls, while others struggled despite spending millions.",
+  caption= "Source: The Baseball Cube | By Keegan Timmins",
+  x="Team payroll",
+  y="Winning percentage"
+) +
+theme_minimal() +
+  theme(
+    plot.title = element_text(size = 19, face = "bold"),
+    axis.title = element_text(size = 8), 
+    plot.subtitle = element_text(size=9.8), 
+    panel.grid.minor = element_blank(),
+    plot.title.position = "plot"
+    ) 
+```
+
+Looking at more than three decades of MLB data, there's no guarantee that spending more money will produce more wins.
+
+The green dots highlight teams that spent less than \$100 million but won more than 65% of their games. The blue dots represent teams that spent more than \$150 million and finished with losing over 60% of their games. The final color, red represents teams that spent over \$350 million dollars that year regardless of success.
+
+WHiles expensive rosters can help teams compete, several smaller budget teams have proven that success doesn't always require a massive payroll.
+
+But have the same teams always dominated baseball’s spending?
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggrepel)
+library(ggbump)
+
+mlb <- read.csv("mlb_payroll_wins_1995_2026.csv")
+
+rankings <- mlb |>
+  group_by(year) |>
+  mutate(payroll_rank=rank(-payroll))
+
+high2026 <- mlb |>
+  filter(year == 2026) |>
+  arrange(desc(payroll)) |>
+  head(3)
+
+low2026 <- mlb |>
+  filter(year == 2026) |>
+  arrange(payroll) |>
+  head(3)
+
+highteams <- rankings |>
+  filter(team %in% high2026$team)
+
+lowteams <- rankings |>
+  filter(team %in% low2026$team)
+
+lowteams <- rankings |>
+  filter(team %in% low2026$team |
+         team == "Cleveland Indians" | 
+         team == "Tampa Bay Devil Rays" |
+         team == "Florida Marlins")
+
+lowteams <- lowteams |>
+  mutate(
+    team=gsub("Cleveland Indians", "Cleveland Guardians", team)
+  )
+
+lowteams <- lowteams |>
+  mutate(
+    team=gsub("Tampa Bay Devil Rays", "Tampa Bay Rays", team)
+  )
+
+lowteams <- lowteams |>
+  mutate(
+    team=gsub("Florida Marlins", "Miami Marlins", team)
+  )
+
+cleveland <- lowteams |>
+  filter(team == "Cleveland Guardians", year == 2026)
+
+tampa <- lowteams |>
+  filter(team == "Tampa Bay Rays", year == 2026)
+
+miami <- lowteams |>
+  filter(team == "Miami Marlins", year == 2026)
+
+dodgers <- highteams |>
+  filter(team == "Los Angeles Dodgers", year == 2026)
+
+mets <- highteams |>
+  filter(team == "New York Mets", year == 2026)
+
+yankees <- highteams |>
+  filter(team == "New York Yankees", year == 2026)
+
+ggplot() +
+  geom_bump(
+    data=rankings,
+    aes(
+      x=year,
+      y=payroll_rank,
+      group=team
+    ),
+    color="lightgrey"
+  ) +
+  geom_bump(
+  data=highteams,
+  aes(
+    x=year,
+    y=payroll_rank,
+    group=team
+  ),
+  color="green"
+) +
+geom_bump(
+  data=lowteams,
+  aes(
+    x=year,
+    y=payroll_rank,
+    group=team
+  ),
+  color="red"
+) +
+geom_point(
+  data=highteams,
+  aes(
+    x=year,
+    y=payroll_rank
+  ),
+  color="green",
+  size=2
+) +
+geom_point(
+  data=lowteams,
+  aes(
+    x=year,
+    y=payroll_rank
+  ),
+  color="red",
+  size=2
+) +
+  geom_text(
+  data=cleveland,
+  aes(
+    x=year + 5,
+    y=payroll_rank -0.5 ,
+    label=team
+  )
+) +
+geom_text(
+  data=tampa,
+  aes(
+    x=year + 4.20,
+    y=payroll_rank -1.5,
+    label=team
+  )
+) +
+  geom_text(
+  data=miami,
+  aes(
+    x=year + 3.5,
+    y=payroll_rank +0.5,
+    label=team
+  )
+) +
+geom_text(
+  data=dodgers,
+  aes(
+    x=year + 5,
+    y=payroll_rank - 1.3,
+    label=team
+  )
+) +
+geom_text(
+  data=mets,
+  aes(
+    x=year + 4,
+    y=payroll_rank,
+    label=team
+  )
+) +
+geom_text(
+  data=yankees,
+  aes(
+    x=year + 4.5,
+    y=payroll_rank + 1.3,
+    label=team
+  )
+) +
+scale_y_reverse() +
+scale_x_continuous(
+  breaks=c(1995, 1998, 2000, 2005, 2010, 2015, 2020, 2026),
+  limits=c(1995, 2034)
+) +
+  labs(
+  title= "MLB's highest and lowest payrolls take different paths",
+  subtitle="Green shows the three highest-paid MLB teams, while red tracks the three lowest-paid teams from 1995 to 2026.",
+  caption= "Source: The Baseball Cube | By Keegan Timmins",
+  x="Year",
+  y="Team payroll rank"
+  ) +
+  theme_minimal() +
+  theme(
+  plot.title = element_text(size = 20, face = "bold"),
+  axis.title = element_text(size = 8),
+  plot.subtitle = element_text(size = 10),
+  panel.grid.minor = element_blank(),
+  plot.title.position = "plot"
+)
+```
+
+The second chart tracks the three highest and lowest paid teams from 2026, following them throughout since the 1995 season.
+
+The Dodgers, Mets and Yankees are highlighted in green, while the Marlins, Guardians and Rays are shown in red.
+
+The Yankees have regularly ranked among baseball’s biggest spenders, while the other 2 franchises have experienced changes in their payroll rankings.
+
+But despite their different spending approaches all of these six teams have the same goal. Get to the postseason and win the championship.
+
+So how did these different teams perform in the 2026 season?
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggrepel)
+
+mlb <- read.csv("mlb_payroll_wins_1995_2026.csv")
+
+teams2026 <- mlb |>
+  filter(year == 2026) |>
+  arrange(desc(payroll))
+
+playoffteams <- teams2026 |>
+  filter(team %in% c(
+    "Tampa Bay Rays",
+    "Cleveland Guardians",
+    "Houston Astros",
+    "New York Yankees",
+    "Boston Red Sox",
+    "Chicago White Sox",
+    "Milwaukee Brewers",
+    "Los Angeles Dodgers",
+    "Atlanta Braves",
+    "San Diego Padres",
+    "Chicago Cubs",
+    "Philadelphia Phillies"
+  ))
+
+ggplot() +
+  geom_segment(
+    data=teams2026,
+    aes(
+      y=reorder(team, payroll),
+      yend=team,
+      x=wins,
+      xend=losses
+    ),
+    color="grey",
+    linewidth=1.5
+  ) +
+  geom_segment(
+    data=playoffteams,
+    aes(
+      y=reorder(team, payroll),
+      yend=team,
+      x=wins,
+      xend=losses
+    ),
+    color="blue",
+    linewidth=1.5
+  ) +
+geom_point(
+  data=teams2026,
+  aes(
+    y=team,
+    x=wins
+  ),
+  color="green",
+  size=3
+) +
+geom_point(
+  data=teams2026,
+  aes(
+    y=team,
+    x=losses
+  ),
+  color="red",
+  size=3
+) +
+labs(
+  title="MLB playoff teams succeeded at every payroll level",
+  subtitle="The 2026 playoff teams are highlighted in blue, with green showing wins and red showing losses.",
+  caption= "Source: The Baseball Cube | By Keegan Timmins",
+  x="Number of games",
+  y="MLB teams"
+) +
+theme_minimal() +
+  theme(
+    plot.title = element_text(size = 20, face = "bold"),
+    axis.title = element_text(size = 8), 
+    plot.subtitle = element_text(size=10), 
+    panel.grid.minor = element_blank(),
+    plot.title.position = "plot"
+    ) 
+```
+
+The final chart compares every team's win and loss record during the 2026 season, with the playoff teams being highlighted in blue.
+
+Cleveland provides one of the best examples.
+
+Despite having the second lowest payroll in the league, the Guardians finished with a 85-77 record, winning the American League Central and reaching the playoffs.
+
+You take a look at the second most expensive team ever, the 2026 Mets, who finished with a losing record of 74-88, missing the postseason.
+
+Milwaukee also proved that spending the most money isn’t needed to win the most. The Brewers finished 20th in the payroll ranks but finished with the best record at 103-59. This also shows when they won the world series
+
+The data shows that spending money can help you win games, but doesn't guarantee anything.
+
+The Mets spent big and missed the playoffs, while Cleveland and Tampa Bay didn’t spend much and made it to the postseason and world series.
+
+Having money gives teams more opportunities to build a talented team, but the games still have to be played.
+
+Overall baseball isn’t about who’s pocket is the deepest
